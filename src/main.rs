@@ -5,63 +5,13 @@ use ureq;
 use serde::Deserialize;
 use serde_json::Value;
 
-/*{
-    "type": 0,
-    "code": "CMEqPXC9A5",
-    "inviter": {
-        "id": "302050872383242240",
-        "username": "DISBOARD",
-        "avatar": "67342a774a9f2d20d62bfc8553bb98e0",
-        "discriminator": "2760",
-        "public_flags": 589824,
-        "premium_type": 0,
-        "flags": 589824,
-        "bot": true,
-        "banner": null,
-        "accent_color": null,
-        "global_name": null,
-        "avatar_decoration_data": null,
-        "banner_color": null
-    },
-    "expires_at": null,
-    "flags": 2,
-    "guild": {
-        "id": "1069405259002294313",
-        "name": "\u307d\u304b\u307d\u304b",
-        "splash": null,
-        "banner": null,
-        "description": null,
-        "icon": "7c45935a1b420c5419cc3255fe8f95d3",
-        "features": [
-            "NEWS",
-            "COMMUNITY",
-            "MEMBER_VERIFICATION_GATE_ENABLED",
-            "AUTO_MODERATION",
-            "CHANNEL_ICON_EMOJIS_GENERATED",
-            "SOUNDBOARD",
-            "PREVIEW_ENABLED"
-        ],
-        "verification_level": 2,
-        "vanity_url_code": null,
-        "nsfw_level": 0,
-        "nsfw": false,
-        "premium_subscription_count": 0
-    },
-    "guild_id": "1069405259002294313",
-    "channel": {
-        "id": "1069438412576280699",
-        "type": 0,
-        "name": "\ud83d\udc4d\u3010bot\u30c1\u30e3\u30f3\u30cd\u30eb\u3011"
-    }
-} */
-
 #[derive(Deserialize)]
 struct Invite {
     r#type: i32,
     code: String,
     inviter: Option<Value>,
     expires_at: Option<String>,
-    flags: i32,
+    flags: Option<i32>,
     guild: Value,
     channel: Value,
 }
@@ -112,6 +62,27 @@ fn get_invite() -> String {
     input.trim().to_string().replace("https://discord.gg/", "").replace("https://discord.com/invite/", "")
 }
 
+fn get_link(id: &str, image_id: &str, image_type: &str) -> String {
+    if image_id == "null" {
+        "null".to_string()
+    } else {
+        let gif_url = format!("https://cdn.discordapp.com/{}/{}/{}.gif?size=4096", image_type, id, image_id);
+        let png_url = format!("https://cdn.discordapp.com/{}/{}/{}.png?size=4096", image_type, id, image_id);
+
+        let gif_resp = ureq::get(&gif_url).call();
+        if gif_resp.is_ok() {
+            gif_url
+        } else {
+            let png_resp = ureq::get(&png_url).call();
+            if png_resp.is_ok() {
+                png_url
+            } else {
+                "null".to_string()
+            }
+        }
+    }
+}
+
 fn get_info(token: &str) {
     let invite = get_invite();
     println!("Invite: {}", invite);
@@ -123,22 +94,23 @@ fn get_info(token: &str) {
     if let Ok(response) = resp {
         let response_text = response.into_string().unwrap();
         let info: Invite = serde_json::from_str(&response_text).expect("json読み込みエラー1");
+        let mut inviter_print = String::new();
         if let Some(inviter) = info.inviter {
             let inviter: Inviter = serde_json::from_value(inviter).expect("json読み込みエラー2");
-            println!("Inviter: {},{},{}", inviter.username, inviter.global_name.unwrap_or("null".to_string()), inviter.id);
+            inviter_print = format!("{},{},{}", inviter.username, inviter.global_name.unwrap_or("null".to_string()), inviter.id);
         }
         let guild: Guild = serde_json::from_value(info.guild).expect("json読み込みエラー3");
         let channel: Channel = serde_json::from_value(info.channel).expect("json読み込みエラー4");
         let r#type = info.r#type;
         let code = info.code;
         let expires_at = info.expires_at.unwrap_or("null".to_string());
-        let flags = info.flags;
+        let flags = info.flags.unwrap_or(0);
         let server_id = guild.id;
         let server_name = guild.name;
-        let server_splash = guild.splash.unwrap_or("None".to_string());
-        let server_banner = guild.banner.unwrap_or("None".to_string());
+        let server_splash = get_link(&server_id, &guild.splash.unwrap_or("null".to_string()), "splashes");
+        let server_banner = get_link(&server_id, &guild.banner.unwrap_or("null".to_string()), "banners");
         let server_description = guild.description.unwrap_or("None".to_string());
-        let server_icon = guild.icon.unwrap_or("None".to_string());
+        let server_icon = get_link(&server_id, &guild.icon.unwrap_or("null".to_string()), "icons");
         let server_verification_level = guild.verification_level;
         let server_vanity_url_code = guild.vanity_url_code.unwrap_or("None".to_string());
         let server_nsfw_level = guild.nsfw_level;
@@ -149,6 +121,7 @@ fn get_info(token: &str) {
         let channel_name = channel.name;
         println!("Type: {}", r#type);
         println!("Code: {}", code);
+        println!("Inviter: {}", inviter_print);
         println!("Expires at: {}", expires_at);
         println!("Flags: {}", flags);
         println!("Server ID: {}", server_id);
@@ -161,7 +134,7 @@ fn get_info(token: &str) {
         println!("Server Vanity URL Code: {}", server_vanity_url_code);
         println!("Server NSFW Level: {}", server_nsfw_level);
         println!("Server NSFW: {}", server_nsfw);
-        println!("Server Premium Subscription Count: {}", server_premium_subscription_count);
+        println!("Server Boost Count: {}", server_premium_subscription_count);
         println!("Channel ID: {}", channel_id);
         println!("Channel Type: {}", channel_type);
         println!("Channel Name: {}", channel_name);
