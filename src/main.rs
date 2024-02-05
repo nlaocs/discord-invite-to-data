@@ -83,9 +83,36 @@ fn get_link(id: &str, image_id: &str, image_type: &str) -> String {
     }
 }
 
+fn channel_type(channel_type: i32) -> String {
+    match channel_type {
+        0 => "Server Text Channel".to_string(),
+        1 => "DM".to_string(),
+        2 => "Server Voice Channel".to_string(),
+        3 => "Group DM".to_string(),
+        5 => "Server Announcement".to_string(),
+        10 => "Announcement Thread".to_string(),
+        11 => "Public Thread".to_string(),
+        12 => "Private Thread".to_string(),
+        13 => "Server Stage Voice".to_string(),
+        14 => "Server Directory".to_string(),
+        15 => "Server Forum".to_string(),
+        16 => "Server Media".to_string(),
+        _ => "Unknown".to_string(),
+    }
+}
+
+fn boost_level(boost_count: i32) -> String {
+    match boost_count {
+        0 => "0".to_string(),
+        1..=6 => "1".to_string(),
+        7..=13 => "2".to_string(),
+        14..=i32::MAX => "3".to_string(),
+        _ => "Unknown".to_string(),
+    }
+}
+
 fn get_info(token: &str) {
     let invite = get_invite();
-    println!("Invite: {}", invite);
     let url = format!("https://discord.com/api/v10/invites/{}", invite);
     let resp = ureq::get(&url)
         .set("authorization", &format!("Bot {}", token))
@@ -94,7 +121,7 @@ fn get_info(token: &str) {
     if let Ok(response) = resp {
         let response_text = response.into_string().unwrap();
         let info: Invite = serde_json::from_str(&response_text).expect("json読み込みエラー1");
-        let mut inviter_print = String::new();
+        let mut inviter_print = "null".to_string();
         if let Some(inviter) = info.inviter {
             let inviter: Inviter = serde_json::from_value(inviter).expect("json読み込みエラー2");
             inviter_print = format!("{},{},{}", inviter.username, inviter.global_name.unwrap_or("null".to_string()), inviter.id);
@@ -115,15 +142,18 @@ fn get_info(token: &str) {
         let server_vanity_url_code = guild.vanity_url_code.unwrap_or("None".to_string());
         let server_nsfw_level = guild.nsfw_level;
         let server_nsfw = guild.nsfw;
-        let server_premium_subscription_count = guild.premium_subscription_count;
+        let server_boost_count = guild.premium_subscription_count;
+        let server_boost_level = boost_level(server_boost_count);
         let channel_id = channel.id;
-        let channel_type = channel.r#type;
+        let channel_type = channel_type(channel.r#type);
         let channel_name = channel.name;
+        println!("Invite: {}", invite);
         println!("Type: {}", r#type);
         println!("Code: {}", code);
         println!("Inviter: {}", inviter_print);
         println!("Expires at: {}", expires_at);
         println!("Flags: {}", flags);
+        println!("-------------------------------------");
         println!("Server ID: {}", server_id);
         println!("Server Name: {}", server_name);
         println!("Server Splash: {}", server_splash);
@@ -134,7 +164,9 @@ fn get_info(token: &str) {
         println!("Server Vanity URL Code: {}", server_vanity_url_code);
         println!("Server NSFW Level: {}", server_nsfw_level);
         println!("Server NSFW: {}", server_nsfw);
-        println!("Server Boost Count: {}", server_premium_subscription_count);
+        println!("Server Boost Count: {}", server_boost_count);
+        println!("Server Boost Level: {}", server_boost_level);
+        println!("-------------------------------------");
         println!("Channel ID: {}", channel_id);
         println!("Channel Type: {}", channel_type);
         println!("Channel Name: {}", channel_name);
