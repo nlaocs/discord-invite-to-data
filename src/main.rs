@@ -147,7 +147,6 @@ fn get_info(token: &str) {
         let channel_id = channel.id;
         let channel_type = channel_type(channel.r#type);
         let channel_name = channel.name;
-        println!("Invite: {}", invite);
         println!("Type: {}", r#type);
         println!("Code: {}", code);
         println!("Inviter: {}", inviter_print);
