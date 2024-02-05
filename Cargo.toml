@@ -1,8 +1,10 @@
 [package]
-name = "discord_serverid_to_data"
+name = "discord_invite_to_data"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+dotenv = "0.15.0"
+ureq = "2.9.1"
